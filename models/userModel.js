@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import validator from 'validator';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -35,6 +36,9 @@ const userSchema = new mongoose.Schema({
       message: 'Passwords donot match',
     },
   },
+  passwordResetToken: String,
+  resetPasswordExpiresIn: String,
+  passwordChangedAt: Date,
 });
 
 // pre save document mongoose middleware is called after submit and before saving to db.
@@ -52,6 +56,33 @@ userSchema.methods.correctPassword = async function (
   userPassword
 ) {
   return await bcrypt.compare(candidatePassword, userPassword);
+};
+
+userSchema.methods.createResetPasswordToken = function () {
+  // 10 mins
+  const resetPasswordExpiresTime = 10 * 60 * 1000;
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  this.resetPasswordExpiresIn = Date.now() + resetPasswordExpiresTime;
+
+  return resetToken;
+};
+
+userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
+  if (this.passwordChangedAt) {
+    const changedTimestamp = parseInt(
+      this.passwordChangedAt.getTime() / 1000,
+      10
+    );
+
+    return JWTTimestamp < changedTimestamp;
+  }
+  // False means NOT changed
+  return false;
 };
 
 const User = mongoose.model('User', userSchema);
