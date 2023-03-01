@@ -5,6 +5,8 @@ import AppError from '../utlis/appError.js';
 
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import sendEmail from '../utlis/email.js';
+
 dotenv.config({ path: './config.env' });
 
 const signToken = (id) => {
@@ -98,4 +100,42 @@ export const restrictTo = (...roles) => {
     }
     next();
   };
+};
+
+export const forgetPassword = catchAsync(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user)
+    return next(new AppError('User with this email doesnot exists', 404));
+
+  const resetToken = user.createResetPasswordToken();
+  await user.save({ validateBeforeSave: false });
+
+  // sent it to the user
+  const resetUrl = `${req.protocol}://${req.get(
+    'host'
+  )}/api/v1/users/reset-password/${resetToken}}`;
+
+  const message = `Forget Your Password? Reset here\n ${resetUrl} \n
+  if you did not forget it simply ignore this email.!
+  `;
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: 'Your password reset token is valid for 10 mins only',
+      message,
+    });
+
+    res.status(200).json({ status: 'success', message: 'Token Sent to email' });
+  } catch (error) {
+    user.passwordResetToken = undefined;
+    user.resetPasswordExpiresIn = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(
+      new AppError('There was error sending email try again later', 500)
+    );
+  }
+});
+
+export const resetPassword = (req, res, next) => {
+  console.log('hehe ');
 };
