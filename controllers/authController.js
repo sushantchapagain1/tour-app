@@ -2,7 +2,7 @@ import { promisify } from 'util'; //built in ulity
 import User from './../models/userModel.js';
 import catchAsync from '../utlis/catchAsync.js';
 import AppError from '../utlis/appError.js';
-
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import sendEmail from '../utlis/email.js';
@@ -113,11 +113,12 @@ export const forgetPassword = catchAsync(async (req, res, next) => {
   // sent it to the user
   const resetUrl = `${req.protocol}://${req.get(
     'host'
-  )}/api/v1/users/reset-password/${resetToken}}`;
+  )}/api/v1/users/reset-password/${resetToken}`;
 
-  const message = `Forget Your Password? Reset here\n ${resetUrl} \n
+  const message = `Forget Your Password? Reset here\n${resetUrl}\n
   if you did not forget it simply ignore this email.!
   `;
+
   try {
     await sendEmail({
       email: user.email,
@@ -127,6 +128,7 @@ export const forgetPassword = catchAsync(async (req, res, next) => {
 
     res.status(200).json({ status: 'success', message: 'Token Sent to email' });
   } catch (error) {
+    // if error occured while sending the reset then we have to set it to undefined
     user.passwordResetToken = undefined;
     user.resetPasswordExpiresIn = undefined;
     await user.save({ validateBeforeSave: false });
@@ -136,6 +138,28 @@ export const forgetPassword = catchAsync(async (req, res, next) => {
   }
 });
 
-export const resetPassword = (req, res, next) => {
-  console.log('hehe ');
-};
+export const resetPassword = catchAsync(async (req, res, next) => {
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(req.params.token)
+    .digest('hex');
+
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    resetPasswordExpiresIn: { $gt: Date.now() },
+  });
+
+  if (!user) return next(new AppError('Token is invalid or expired!', 404));
+
+  user.password = req.body.password;
+  user.confirmPassword = req.body.confirmPassword;
+  user.passwordResetToken = undefined;
+  user.resetPasswordExpiresIn = undefined;
+  await user.save();
+
+  const token = signToken(user._id);
+  res.status(200).json({
+    status: 'success',
+    token,
+  });
+});
