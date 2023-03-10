@@ -39,6 +39,11 @@ const userSchema = new mongoose.Schema({
   passwordResetToken: String,
   resetPasswordExpiresIn: Date,
   passwordChangedAt: Date,
+  active: {
+    type: Boolean,
+    default: true,
+    select: false, //not show in output
+  },
 });
 
 // pre save document mongoose middleware is called after submit and before saving to db.
