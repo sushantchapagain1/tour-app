@@ -12,6 +12,9 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
+import expressMongoSanitize from 'express-mongo-sanitize';
+import { xssFilter } from 'helmet';
+import hpp from 'hpp';
 
 dotenv.config({ path: './config.env' });
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -40,7 +43,23 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 app.use(express.json());
+app.use(expressMongoSanitize());
+app.use(xssFilter());
 app.use(express.static(`${__dirname}/public`));
+
+// prevent parameter pollution
+app.use(
+  hpp({
+    whitelist: [
+      'duration',
+      'ratingsQuantity',
+      'ratingsAverage',
+      'maxGroupSize',
+      'difficulty',
+      'price',
+    ],
+  })
+);
 
 // our own middleware due to req response stop we need to write middleware code in top.
 app.use((req, res, next) => {
