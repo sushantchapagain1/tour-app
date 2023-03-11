@@ -10,15 +10,35 @@ import { globalErrorHandler } from './controllers/errorController.js';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { rateLimit } from 'express-rate-limit';
+import helmet from 'helmet';
 
 dotenv.config({ path: './config.env' });
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const app = express();
 
 // 1.MIDDLEWARES.
+
+app.use(helmet());
+
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
+
+const oneHour = 60 * 60 * 1000;
+
+const limiter = rateLimit({
+  max: 100,
+  windowMs: oneHour, //100 request un 1 hour
+  message: 'Too many requests from this ip ! Please try again later',
+});
+
+// Apply the rate limiting middleware to all requests
+// app.use(limiter)
+
+// Apply the rate limiting middleware to API calls only
+app.use('/api', limiter);
+
 app.use(express.json());
 app.use(express.static(`${__dirname}/public`));
 
