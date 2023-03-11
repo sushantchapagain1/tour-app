@@ -14,17 +14,11 @@ const DB = process.env.DATABASE.replace(
 );
 console.log(DB, 'db string');
 mongoose
-  .connect(DB, {
-    useNewUrlParser: true,
-    useCreateIndex: true,
-    useFindAndModify: false,
-  })
+  .connect(DB)
   .then(() => console.log(`Database connection sucessfull`))
   .catch((err) => console.log(err));
 
-const tours = JSON.parse(
-  fs.readFileSync(`${__dirname}/tours-simple.json`, 'utf-8')
-);
+const tours = JSON.parse(fs.readFileSync(`${__dirname}/tours.json`, 'utf-8'));
 
 // import data function in database
 
