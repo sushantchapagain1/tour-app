@@ -35,7 +35,6 @@ export const updateMe = catchAsync(async (req, res, next) => {
   });
 });
 
-// delete me  controller
 export const deleteMe = catchAsync(async (req, res, next) => {
   //not deleting user from database only setting active to false
   await User.findByIdAndUpdate(req.user.id, { active: false });

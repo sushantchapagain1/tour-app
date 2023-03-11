@@ -2,7 +2,7 @@ import { promisify } from 'util'; //built in ulity
 import User from './../models/userModel.js';
 import catchAsync from '../utlis/catchAsync.js';
 import AppError from '../utlis/appError.js';
-import crypto from 'crypto';
+import crypto from 'crypto'; //built in ulity
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import sendEmail from '../utlis/email.js';
@@ -16,21 +16,29 @@ const signToken = (id) => {
 };
 
 const createSendToken = (user, statusCode, res) => {
+  const convertToMilliseconds = 24 * 60 * 60 * 1000;
   const token = signToken(user._id);
+  const cookieOptions = {
+    expiresIn: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRY_TIME * convertToMilliseconds
+    ),
+    httpOnly: true,
+    // secure: true, //only works with https
+  };
+  if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
+  res.cookie('jwt', token, cookieOptions);
+
+  user.password = undefined; //not show up in data output
+
   res.status(statusCode).json({
     status: 'success',
     token,
+    data: { user },
   });
 };
 
 export const signup = catchAsync(async (req, res, next) => {
-  // in signup donot use create(req.body) cz auyone can assign them as admin
-  // const newUser = await User.create({
-  //   name: req.body.name,
-  //   email: req.body.email,
-  //   password: req.body.password,
-  //   confirmPassword: req.body.confirmPassword,
-  // });
+  // TODO use filter fields instead of req.body.fields
 
   const newUser = await User.create(req.body);
   createSendToken(newUser, 201, res);
