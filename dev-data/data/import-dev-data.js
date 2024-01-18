@@ -53,5 +53,5 @@ const deleteAlldata = async function () {
 if (process.argv.includes('--import')) importData();
 else if (process.argv.includes('--delete')) deleteAlldata();
 
-// node .\dev-data\data\import-dev-data.js --import
-// node .\dev-data\data\import-dev-data.js --delete
+// node dev-data\data\import-dev-data.js --import
+// node dev-data\data\import-dev-data.js --delete
